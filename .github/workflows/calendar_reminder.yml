@@ -1,0 +1,47 @@
+---
+name: Calendar Reminder
+on:
+  schedule:
+    - cron: "30 11 * * *" # 6:30am EST (UTC-5, Nov–Mar)
+    - cron: "30 10 * * *" # 6:30am EDT (UTC-4, Mar–Nov)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: hynek/setup-cached-uv@v2
+
+      - name: Restore reminder state
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/calendar2mastodon
+          key: reminder-state-${{ runner.os }}
+
+      - name: Install (no dev deps)
+        run: uv sync --no-dev
+
+      - name: Run reminders
+        env:
+          ICAL_URL: ${{ secrets.ICAL_URL }}
+          MASTODON_BASE_URL: ${{ secrets.MASTODON_BASE_URL }}
+          MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
+        run: uv run calendar2mastodon
+
+      - name: Save reminder state
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/calendar2mastodon
+          key: reminder-state-${{ runner.os }}
