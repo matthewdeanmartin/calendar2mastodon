@@ -6,11 +6,12 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import cast
 
 if sys.version_info >= (3, 11):
     import tomllib
 else:
-    import tomli as tomllib  # type: ignore[import-untyped]
+    import tomli as tomllib
 
 
 TOOL_KEY = "calendar2mastodon"
@@ -30,12 +31,14 @@ DEFAULTS: dict[str, object] = {
 ENV_MAP: dict[str, str] = {
     "ical_url": "ICAL_URL",
     "mastodon_base_url": "MASTODON_BASE_URL",
-    "mastodon_access_token": "MASTODON_ACCESS_TOKEN",
+    "mastodon_access_token": "MASTODON_ACCESS_TOKEN",  # nosec B105 — env var name, not a password
 }
 
 
 @dataclass
 class AppConfig:
+    """Application configuration assembled from TOML, env vars, and CLI overrides."""
+
     ical_url: str = ""
     mastodon_base_url: str = "https://mastodon.social"
     mastodon_username: str = "mistersql"
@@ -59,17 +62,22 @@ def find_pyproject_toml(start: Path) -> Path | None:
     return None
 
 
-def load_toml_config(path: Optional[Path]) -> dict[str, object]:
+def load_toml_config(path: Path | None) -> dict[str, object]:
+    """Read the [tool.calendar2mastodon] table from pyproject.toml, returning {} on any miss."""
     if path is None:
         path = find_pyproject_toml(Path.cwd())
     if path is None or not path.is_file():
         return {}
     with open(path, "rb") as fh:
         data = tomllib.load(fh)
-    return data.get("tool", {}).get(TOOL_KEY, {})  # type: ignore[return-value]
+    raw = data.get("tool", {}).get(TOOL_KEY, {})
+    if not isinstance(raw, dict):
+        return {}
+    return cast(dict[str, object], raw)
 
 
 def parse_offset(value: object) -> str | None:
+    """Convert a raw config value to a trimmed offset string, or None if blank/absent."""
     if value is None:
         return None
     s = str(value).strip()
@@ -80,6 +88,7 @@ def build_config(
     toml_path: Path | None = None,
     cli_overrides: dict[str, object] | None = None,
 ) -> AppConfig:
+    """Merge TOML file, environment variables, and CLI overrides into an AppConfig."""
     toml = load_toml_config(toml_path)
 
     def get(key: str) -> object:

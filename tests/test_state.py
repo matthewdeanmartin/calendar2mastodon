@@ -1,8 +1,5 @@
 """Tests for sent-reminder state tracking."""
 
-import json
-from pathlib import Path
-
 from calendar2mastodon.state import load_sent, make_key, save_sent
 
 

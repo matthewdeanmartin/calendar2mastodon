@@ -6,14 +6,17 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
+from urllib.request import url2pathname
 from zoneinfo import ZoneInfo
 
 import httpx
-from icalendar import Calendar, vDatetime  # type: ignore[import-untyped]
+from icalendar import Calendar
 
 
 @dataclass
 class CalendarEvent:
+    """A parsed calendar event with normalized timezone-aware datetimes."""
+
     uid: str
     summary: str
     start: datetime
@@ -24,9 +27,10 @@ class CalendarEvent:
 
 
 def fetch_ical(url: str, timeout: int = 15) -> bytes:
+    """Fetch raw iCal bytes from a file:// or https:// URL."""
     parsed = urlparse(url)
     if parsed.scheme == "file":
-        return Path(parsed.path).read_bytes()
+        return Path(url2pathname(parsed.path)).read_bytes()
     if parsed.scheme != "https":
         raise ValueError(f"iCal URL must use https (got {parsed.scheme!r})")
     with httpx.Client(verify=True, timeout=timeout) as client:
@@ -36,6 +40,7 @@ def fetch_ical(url: str, timeout: int = 15) -> bytes:
 
 
 def as_aware_datetime(value: object, tz: ZoneInfo) -> datetime:
+    """Convert a date or datetime to a timezone-aware datetime in the given zone."""
     if isinstance(value, datetime):
         if value.tzinfo is None:
             return value.replace(tzinfo=tz)
@@ -46,24 +51,25 @@ def as_aware_datetime(value: object, tz: ZoneInfo) -> datetime:
 
 
 def parse_ical(raw: bytes, tz: ZoneInfo) -> list[CalendarEvent]:
-    cal = Calendar.from_ical(raw)
+    """Parse raw iCal bytes into a list of CalendarEvent dataclasses."""
+    cal = Calendar.from_ical(raw)  # type: ignore  # icalendar accepts bytes despite str-only stubs
     events: list[CalendarEvent] = []
     for component in cal.walk():
         if component.name != "VEVENT":
             continue
 
-        uid = str(component.get("UID", ""))
-        summary = str(component.get("SUMMARY", ""))
-        location = str(component.get("LOCATION", ""))
-        description = str(component.get("DESCRIPTION", ""))
+        uid = str(component.get("UID", ""))  # type: ignore[no-untyped-call]
+        summary = str(component.get("SUMMARY", ""))  # type: ignore[no-untyped-call]
+        location = str(component.get("LOCATION", ""))  # type: ignore[no-untyped-call]
+        description = str(component.get("DESCRIPTION", ""))  # type: ignore[no-untyped-call]
 
-        dt_start = component.get("DTSTART")
-        dt_end = component.get("DTEND")
+        dt_start = component.get("DTSTART")  # type: ignore[no-untyped-call]
+        dt_end = component.get("DTEND")  # type: ignore[no-untyped-call]
         if dt_start is None:
             continue
 
-        raw_start = dt_start.dt if isinstance(dt_start, vDatetime) else dt_start.dt
-        raw_end = dt_end.dt if dt_end is not None and isinstance(dt_end, vDatetime) else (dt_end.dt if dt_end else raw_start)
+        raw_start = dt_start.dt
+        raw_end = dt_end.dt if dt_end is not None else raw_start
 
         all_day = isinstance(raw_start, date) and not isinstance(raw_start, datetime)
         start = as_aware_datetime(raw_start, tz)
@@ -84,5 +90,6 @@ def parse_ical(raw: bytes, tz: ZoneInfo) -> list[CalendarEvent]:
 
 
 def load_events(url: str, tz: ZoneInfo) -> list[CalendarEvent]:
+    """Fetch and parse an iCal feed, returning CalendarEvent objects."""
     raw = fetch_ical(url)
     return parse_ical(raw, tz)

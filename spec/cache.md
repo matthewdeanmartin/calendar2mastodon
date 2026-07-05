@@ -2,11 +2,10 @@
 
 ## The problem
 
-`calendar2mastodon` writes a local JSON file recording which `(event_uid,
-reminder_number, date)` tuples have already been posted. Without persistence
+`calendar2mastodon` writes a local JSON file recording which `(event_uid, reminder_number, date)` tuples have already been posted. Without persistence
 across GHA runs this file is lost every run and every event gets re-posted.
 
----
+______________________________________________________________________
 
 ## Option 1: `actions/cache` (current spec default)
 
@@ -18,11 +17,13 @@ across GHA runs this file is lost every run and every event gets re-posted.
 ```
 
 **Pros**
+
 - Zero extra infrastructure.
-- Fast restore (<1s for a tiny JSON file).
+- Fast restore (\<1s for a tiny JSON file).
 - Built into GHA.
 
 **Cons**
+
 - Cache can be evicted (GHA evicts LRU entries when the org/repo hits the 10 GB
   cap, or after 7 days of non-use on free plans).
 - If evicted on a day when an event exists, that event's reminder fires again.
@@ -31,7 +32,7 @@ across GHA runs this file is lost every run and every event gets re-posted.
 
 **Verdict**: good enough for personal use. Implement as default.
 
----
+______________________________________________________________________
 
 ## Option 2: Commit state file to a dedicated branch
 
@@ -39,10 +40,12 @@ The workflow commits `sent.json` back to an orphan branch (e.g.
 `refs/heads/state`) after each run.
 
 **Pros**
+
 - Durable: survives cache eviction.
 - Visible: you can inspect history of what was sent.
 
 **Cons**
+
 - Requires `contents: write` permission (widens the workflow's blast radius).
 - Adds a git commit + push step (~2–3s extra, minor).
 - Orphan branch is slightly awkward to manage.
@@ -52,22 +55,24 @@ The workflow commits `sent.json` back to an orphan branch (e.g.
 **Verdict**: viable but overkill for a personal tool. Implement as optional
 `--state-backend git-branch` flag if durability ever matters.
 
----
+______________________________________________________________________
 
 ## Option 3: External store (Redis, S3, DynamoDB, etc.)
 
 Store sent state in a cloud key-value store.
 
 **Pros**
+
 - Fully durable and race-safe.
 
 **Cons**
+
 - Requires provisioning external infra and another secret.
 - Way over-engineered for a personal calendar reminder.
 
 **Verdict**: not worth it. Document as a "bring your own" extension point.
 
----
+______________________________________________________________________
 
 ## Option 4: Idempotent design — skip state entirely
 
@@ -76,11 +81,13 @@ Design reminders so they are inherently idempotent: a digest that always posts
 evicted you get the same DM twice — not a bug, just a minor duplicate.
 
 **Pros**
+
 - No state file needed.
 - No persistence problem.
 - Simpler code.
 
 **Cons**
+
 - If the user adds a second reminder (e.g. 2h before event), deduplication
   matters more — you don't want that firing twice on a re-run.
 - Loses the ability to detect "this specific reminder was already sent today".
@@ -89,11 +96,12 @@ evicted you get the same DM twice — not a bug, just a minor duplicate.
 correctness when reminder 2 is enabled, but make the consequence of losing it
 clear: at worst you get one duplicate DM.
 
----
+______________________________________________________________________
 
 ## EST vs EDT and the cron timing issue
 
 The GHA cron `"30 11 * * *"` (11:30 UTC) equals:
+
 - 6:30am EST (UTC-5, November–March)
 - 7:30am EDT (UTC-4, March–November)
 
@@ -112,7 +120,7 @@ gets two runs but the digest content is identical so it is harmless.
 The simpler single-cron approach is recommended; the 1-hour EDT drift is
 acceptable for a morning digest.
 
----
+______________________________________________________________________
 
 ## Recommendation
 

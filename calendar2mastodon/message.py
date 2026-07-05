@@ -8,6 +8,7 @@ from calendar2mastodon.ical_fetch import CalendarEvent
 
 
 def format_event_message(event: CalendarEvent, reminder_number: int, tz: ZoneInfo) -> str:
+    """Format a human-readable reminder message for a calendar event."""
     local_start = event.start.astimezone(tz)
     time_str = local_start.strftime("%I:%M %p %Z").lstrip("0")
     lines = [f"Reminder {reminder_number}: {event.summary} at {time_str}"]
@@ -25,6 +26,7 @@ def build_message(
     static_message: str,
     tz: ZoneInfo,
 ) -> str:
+    """Return the DM body text, either static or event-derived."""
     if mode == "static":
         return static_message
     return format_event_message(event, reminder_number, tz)

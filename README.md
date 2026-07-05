@@ -18,7 +18,7 @@
   - [ ] Update CHANGELOG.md 0.1.0 entry with real release notes
 -->
 
-A Python tool to post calendar events to Mastodon
+A Python tool to post calendar events to Mastodon as self-DMs and automatically clean up its own tagged reminders after one week.
 
 ## Installation
 
@@ -37,6 +37,8 @@ pip install calendar2mastodon
 ```bash
 calendar2mastodon --help
 ```
+
+The Mastodon token needs enough access to read and delete the bot's own reminder posts as well as create them.
 
 ## Contributing
 

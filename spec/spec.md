@@ -7,7 +7,7 @@ as Mastodon DMs (direct messages) to the authenticated account owner.
 It is designed to run as a GitHub Actions scheduled workflow and must minimise
 startup overhead to reduce billed GHA minutes.
 
----
+______________________________________________________________________
 
 ## Goals
 
@@ -21,7 +21,7 @@ startup overhead to reduce billed GHA minutes.
 - Ships a ready-to-use GitHub Actions workflow for scheduling.
 - Secure by default: no secrets in config files, no logging of credentials.
 
----
+______________________________________________________________________
 
 ## Functional Requirements
 
@@ -69,7 +69,7 @@ Controlled by `message_mode` (config / CLI):
 - Runtime dependency: `tzdata` package (required on Windows and some Linux
   containers where system tz data may be absent).
 
----
+______________________________________________________________________
 
 ## Configuration
 
@@ -99,10 +99,10 @@ lookahead_window    = "1d"                      # scan today's events only
 ### Precedence (lowest → highest)
 
 1. `pyproject.toml` `[tool.calendar2mastodon]`
-2. Environment variables
-3. CLI flags
+1. Environment variables
+1. CLI flags
 
----
+______________________________________________________________________
 
 ## CLI Interface
 
@@ -128,7 +128,7 @@ usage: calendar2mastodon [-h] [--version]
 - `--state-file PATH`: override default state file location.
 - All other flags mirror the `[tool.calendar2mastodon]` keys.
 
----
+______________________________________________________________________
 
 ## Module Structure
 
@@ -164,7 +164,7 @@ class ReminderJob:
     fire_at: datetime        # UTC, when this reminder should be sent
 ```
 
----
+______________________________________________________________________
 
 ## Libraries
 
@@ -180,38 +180,47 @@ class ReminderJob:
 defaults, and timeout handling. TLS certificate verification must not be
 disabled.
 
----
+______________________________________________________________________
 
 ## Scheduling Logic
 
 The tool is called once daily (6:30am EST via GHA cron). On each run it:
 
 1. Fetches the iCal feed via `httpx`.
-2. Determines `today` in the configured timezone (`America/New_York` by default).
-3. For every event whose `start` date == today:
+1. Determines `today` in the configured timezone (`America/New_York` by default).
+1. For every event whose `start` date == today:
    - Computes `fire_at` for reminder 1: `now` (offset `"0m"` → fire immediately).
    - Computes `fire_at` for reminder 2 if configured (e.g. `"2h"` → 2 hours
      before event start).
-4. For each `ReminderJob` that should fire on this run, post the DM.
+1. Before posting anything new, fetch the authenticated account's own statuses tagged
+   `#calendar2mastodon` and delete any post that is both:
+   - tagged `#calendar2mastodon`
+   - still `direct` visibility
+   - at least 7 days old
+1. For each `ReminderJob` that should fire on this run, post the DM with the
+   `#calendar2mastodon` tag appended so future cleanup can find it safely.
 
 **Deduplication:** A lightweight state file (JSON) records
 `(event_uid, reminder_number, date)` tuples already sent. This prevents a
 re-run or cache miss from double-posting the same reminder.
 
 State file path (precedence):
+
 1. `--state-file` CLI flag
-2. `CALENDAR2MASTODON_STATE_FILE` env var
-3. `~/.cache/calendar2mastodon/sent.json`
+1. `CALENDAR2MASTODON_STATE_FILE` env var
+1. `~/.cache/calendar2mastodon/sent.json`
 
 See `spec/cache.md` for tradeoffs around persisting state in GHA.
 
----
+______________________________________________________________________
 
 ## Security Requirements
 
 - `MASTODON_ACCESS_TOKEN` and `ICAL_URL` are **only** read from environment
   variables — never written to any log or config file on disk.
-- Mastodon post visibility is always `direct` (DM to self only).
+- Mastodon reminder post visibility is always `direct` (DM to self only).
+- Cleanup deletes posts only after confirming two live Mastodon-side criteria:
+  the post is tagged `#calendar2mastodon` and its visibility is still `direct`.
 - The iCal URL scheme is validated as `https` before fetching (or `file` for
   local paths in `--dry-run` / test mode).
 - The generated GHA workflow stores secrets in GitHub Actions secrets only and
@@ -220,25 +229,28 @@ See `spec/cache.md` for tradeoffs around persisting state in GHA.
   `verify=False`.
 - `bandit` is in the dev toolchain as a quality gate.
 
----
+______________________________________________________________________
 
 ## Mastodon OAuth Setup
 
-The app requires a Mastodon API access token with scope `write:statuses`.
+The app requires a Mastodon API access token with scopes `read:accounts`,
+`read:statuses`, and `write:statuses`.
 
 Steps to generate:
+
 1. Log in to your Mastodon instance (`mastodon.social`).
-2. Go to **Preferences → Development → New Application**.
-3. Name: `calendar2mastodon`; Scopes: tick **`write:statuses`** only (uncheck
-   everything else for least privilege).
-4. Click **Submit**, then copy the **Your access token** value.
-5. Store it as the `MASTODON_ACCESS_TOKEN` GitHub Actions secret (never in code
+1. Go to **Preferences → Development → New Application**.
+1. Name: `calendar2mastodon`; Scopes: tick **`read:accounts`**,
+   **`read:statuses`**, and **`write:statuses`** only (uncheck everything else
+   for least privilege).
+1. Click **Submit**, then copy the **Your access token** value.
+1. Store it as the `MASTODON_ACCESS_TOKEN` GitHub Actions secret (never in code
    or config files).
 
 The `mastodon_username` config value (`mistersql`) is used to address the DM
 to yourself via `@mistersql@mastodon.social`.
 
----
+______________________________________________________________________
 
 ## GitHub Actions Workflow
 
@@ -293,6 +305,7 @@ jobs:
 ```
 
 Notes:
+
 - Cron fires at 11:30 UTC = 6:30am EST (UTC-5). During EDT (UTC-4) the run
   lands at 7:30am — acceptable for a morning digest. If exact local time matters
   year-round, two cron entries can cover winter and summer separately.
@@ -301,11 +314,11 @@ Notes:
 - `persist-credentials: false` limits token exposure.
 - No secrets are printed, echoed, or written to step logs.
 
----
+______________________________________________________________________
 
 ## Performance Notes
 
-- iCal feeds for personal calendars are typically small (<50 KB); no streaming
+- iCal feeds for personal calendars are typically small (\<50 KB); no streaming
   needed.
 - `uv` with cached packages brings cold install under ~5 seconds.
 - The tool's own startup should be under 1 second: no heavy imports at module

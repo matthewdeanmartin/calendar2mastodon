@@ -1,14 +1,12 @@
 """Tests for reminder job computation."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
 
 from calendar2mastodon.ical_fetch import CalendarEvent
 from calendar2mastodon.reminder import compute_jobs, parse_offset_to_timedelta
-from datetime import timedelta
-
 
 NY = ZoneInfo("America/New_York")
 
@@ -52,7 +50,6 @@ def test_no_jobs_for_future_date():
     now = datetime(2026, 5, 20, 11, 30, tzinfo=timezone.utc)
     event = make_event("uid-2", 9)
     # Change event to tomorrow
-    from datetime import date
     tomorrow = datetime(2026, 5, 21, 9, 0, tzinfo=NY)
     event.start = tomorrow
     event.end = tomorrow
@@ -76,3 +73,46 @@ def test_second_reminder_disabled():
     event = make_event("uid-4", 14, 0)
     jobs = compute_jobs([event], now, NY, "0m", None)
     assert all(j.reminder_number == 1 for j in jobs)
+
+
+def test_no_jobs_when_events_empty():
+    now = datetime(2026, 5, 20, 11, 30, tzinfo=timezone.utc)
+    jobs = compute_jobs([], now, NY, "0m", None)
+    assert jobs == []
+
+
+def test_no_jobs_when_both_offsets_none():
+    now = datetime(2026, 5, 20, 11, 30, tzinfo=timezone.utc)
+    event = make_event("uid-5", 9, 0)
+    jobs = compute_jobs([event], now, NY, None, None)
+    assert jobs == []
+
+
+def test_reminder_not_fired_when_fire_at_in_future():
+    # Event at 3pm EDT = 19:00 UTC. 2h reminder fires at 17:00 UTC.
+    # now = 16:00 UTC, which is BEFORE 17:00, so reminder should NOT fire.
+    now = datetime(2026, 5, 20, 16, 0, tzinfo=timezone.utc)
+    event = make_event("uid-6", 15, 0)  # 3pm NY = 19:00 UTC
+    jobs = compute_jobs([event], now, NY, None, "2h")
+    assert jobs == []
+
+
+def test_digest_fire_at_equals_now():
+    now = datetime(2026, 5, 20, 14, 0, tzinfo=timezone.utc)
+    event = make_event("uid-7", 9, 0)
+    jobs = compute_jobs([event], now, NY, "0m", None)
+    assert len(jobs) == 1
+    assert jobs[0].fire_at == now
+
+
+def test_parse_offset_whitespace_stripped():
+    assert parse_offset_to_timedelta("  5m  ") == timedelta(minutes=5)
+
+
+def test_parse_offset_invalid_unit():
+    with pytest.raises(ValueError):
+        parse_offset_to_timedelta("5w")  # weeks not supported
+
+
+def test_parse_offset_zero_days():
+    assert parse_offset_to_timedelta("0d") == timedelta(0)

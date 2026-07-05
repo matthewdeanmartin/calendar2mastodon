@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import datetime as dt
 from datetime import timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from calendar2mastodon import mastodon_post
 from calendar2mastodon.__about__ import __version__
 from calendar2mastodon.config import AppConfig, build_config
 from calendar2mastodon.ical_fetch import load_events
@@ -17,6 +19,7 @@ from calendar2mastodon.state import load_sent, make_key, save_sent
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build and return the CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="calendar2mastodon",
         description="Post today's calendar events to Mastodon as DMs.",
@@ -38,8 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run(config: AppConfig) -> int:
-    from datetime import datetime as dt
-
+    """Execute the main reminder-posting logic; return an exit code."""
     if not config.ical_url:
         print("ERROR: iCal URL is required (set ICAL_URL env var or ical_url in pyproject.toml)", file=sys.stderr)
         return 1
@@ -50,24 +52,29 @@ def run(config: AppConfig) -> int:
 
     try:
         tz = ZoneInfo(config.timezone)
-    except Exception:
+    except (KeyError, ZoneInfoNotFoundError):
         print(f"ERROR: Unknown timezone {config.timezone!r}", file=sys.stderr)
         return 1
 
     now = dt.now(tz=timezone.utc)
 
+    deleted_posts = 0
+    if not config.dry_run:
+        deleted_posts = mastodon_post.cleanup_old_posts(config.mastodon_base_url, config.mastodon_access_token, now=now)
+
     try:
         events = load_events(config.ical_url, tz)
-    except ValueError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
-    except Exception as exc:
+    except (ValueError, OSError) as exc:
         print(f"ERROR fetching iCal feed: {exc}", file=sys.stderr)
         return 1
 
+    # TODO: lookahead_window (config.lookahead_window) is not yet applied here;
+    # currently only today's events are matched regardless of that setting.
     jobs = compute_jobs(events, now, tz, config.reminder1_offset, config.reminder2_offset)
 
     if not jobs:
+        if deleted_posts:
+            print(f"Deleted {deleted_posts} old reminder post(s).")
         print("No reminders to send.")
         return 0
 
@@ -89,23 +96,28 @@ def run(config: AppConfig) -> int:
         )
 
         if config.dry_run:
-            print(f"[DRY RUN] Would DM @{config.mastodon_username}@{config.mastodon_base_url.removeprefix('https://')}:")
+            instance_host = config.mastodon_base_url.removeprefix("https://")
+            print(f"[DRY RUN] Would DM @{config.mastodon_username}@{instance_host}:")
             print(text)
             print()
         else:
-            from calendar2mastodon.mastodon_post import post_dm
-            post_dm(config.mastodon_base_url, config.mastodon_access_token, config.mastodon_username, text)
+            mastodon_post.post_dm(
+                config.mastodon_base_url, config.mastodon_access_token, config.mastodon_username, text
+            )
             print(f"Sent reminder {job.reminder_number} for: {job.event.summary}")
 
         new_sent.add(key)
 
     if not config.dry_run:
         save_sent(config.state_file, new_sent)
+        if deleted_posts:
+            print(f"Deleted {deleted_posts} old reminder post(s).")
 
     return 0
 
 
 def main() -> None:
+    """Parse CLI arguments, build config, and run the reminder loop."""
     parser = build_parser()
     args = parser.parse_args()
 

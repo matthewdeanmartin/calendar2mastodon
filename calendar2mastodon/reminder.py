@@ -12,12 +12,15 @@ from calendar2mastodon.ical_fetch import CalendarEvent
 
 @dataclass
 class ReminderJob:
+    """A reminder task that should fire at a given time for a calendar event."""
+
     event: CalendarEvent
     reminder_number: int
     fire_at: datetime
 
 
 def parse_offset_to_timedelta(offset: str) -> timedelta:
+    """Parse an offset string like '0m', '2h', '1d' into a timedelta."""
     match = re.fullmatch(r"(\d+)([mhd])", offset.strip())
     if not match:
         raise ValueError(f"Invalid offset format {offset!r} — expected e.g. '0m', '2h', '1d'")

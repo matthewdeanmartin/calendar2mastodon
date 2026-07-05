@@ -101,7 +101,7 @@ dev = [
     "crosshair-tool>=0.0.80; python_version >= '3.10'",
     "deptry>=0.20.0",
     "import-linter>=2.0",
-    "keepachangelog-manager-fork>=6.1.1,<7",
+    "keepachangelog-manager-fork[all]>=6.5.0",
 ]
 
 [tool.calendar2mastodon]
@@ -167,6 +167,10 @@ packages = ["calendar2mastodon", "tests"]
 module = "tests.*"
 disallow_untyped_defs = false
 disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+module = "calendar2mastodon.ical_fetch"
+warn_unused_ignores = false  # pyrefly needs a type: ignore that mypy 2.x doesn't
 
 [tool.ruff]
 line-length = 120
