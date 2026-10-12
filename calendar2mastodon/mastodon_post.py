@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -28,8 +28,8 @@ def _build_dm_text(username: str, text: str) -> str:
 
 def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 def post_dm(base_url: str, access_token: str, username: str, text: str) -> None:
@@ -40,7 +40,7 @@ def post_dm(base_url: str, access_token: str, username: str, text: str) -> None:
 
 def cleanup_old_posts(base_url: str, access_token: str, now: datetime | None = None) -> int:
     """Delete tagged direct reminders newly expired within the 48-hour cleanup window."""
-    current_time = _as_utc(now) if now is not None else datetime.now(tz=timezone.utc)
+    current_time = _as_utc(now) if now is not None else datetime.now(tz=UTC)
     cutoff = current_time - DELETE_AFTER
     window_start = cutoff - CLEANUP_WINDOW
     deleted = 0

@@ -6,7 +6,6 @@ import getpass
 import subprocess
 import sys
 
-
 SECRETS = [
     (
         "ICAL_URL",
@@ -69,10 +68,7 @@ def prompt_secret(label: str, description: str, hidden: bool) -> str:
     print(f"\n{label}")
     print(f"  {description}")
     while True:
-        if hidden:
-            value = getpass.getpass("  Value (hidden): ").strip()
-        else:
-            value = input("  Value: ").strip()
+        value = getpass.getpass("  Value (hidden): ").strip() if hidden else input("  Value: ").strip()
         if value:
             return value
         print("  Value cannot be empty. Try again.")

@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from datetime import UTC
 from datetime import datetime as dt
-from datetime import timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -57,7 +57,7 @@ def run(config: AppConfig) -> int:
         print(f"ERROR: Unknown timezone {config.timezone!r}", file=sys.stderr)
         return 1
 
-    now = dt.now(tz=timezone.utc)
+    now = dt.now(tz=UTC)
 
     deleted_posts = 0
     if not config.dry_run:

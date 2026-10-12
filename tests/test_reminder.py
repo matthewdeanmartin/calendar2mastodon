@@ -1,6 +1,6 @@
 """Tests for reminder job computation."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -38,7 +38,7 @@ def test_parse_offset_invalid():
 
 
 def test_digest_fires_for_todays_events():
-    now = datetime(2026, 5, 20, 11, 30, tzinfo=timezone.utc)  # 6:30am EST
+    now = datetime(2026, 5, 20, 11, 30, tzinfo=UTC)  # 6:30am EST
     event = make_event("uid-1", 9, 0)  # 9am today
     jobs = compute_jobs([event], now, NY, "0m", None)
     assert len(jobs) == 1
@@ -47,7 +47,7 @@ def test_digest_fires_for_todays_events():
 
 
 def test_no_jobs_for_future_date():
-    now = datetime(2026, 5, 20, 11, 30, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 20, 11, 30, tzinfo=UTC)
     event = make_event("uid-2", 9)
     # Change event to tomorrow
     tomorrow = datetime(2026, 5, 21, 9, 0, tzinfo=NY)
@@ -60,7 +60,7 @@ def test_no_jobs_for_future_date():
 def test_second_reminder_included():
     # Event at 2pm EDT = 18:00 UTC. Reminder2 "2h before" fires at 16:00 UTC.
     # now = 17:00 UTC, which is after 16:00, so both reminders should fire.
-    now = datetime(2026, 5, 20, 17, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 20, 17, 0, tzinfo=UTC)
     event = make_event("uid-3", 14, 0)
     jobs = compute_jobs([event], now, NY, "0m", "2h")
     reminder_numbers = {j.reminder_number for j in jobs}
@@ -69,20 +69,20 @@ def test_second_reminder_included():
 
 
 def test_second_reminder_disabled():
-    now = datetime(2026, 5, 20, 11, 30, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 20, 11, 30, tzinfo=UTC)
     event = make_event("uid-4", 14, 0)
     jobs = compute_jobs([event], now, NY, "0m", None)
     assert all(j.reminder_number == 1 for j in jobs)
 
 
 def test_no_jobs_when_events_empty():
-    now = datetime(2026, 5, 20, 11, 30, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 20, 11, 30, tzinfo=UTC)
     jobs = compute_jobs([], now, NY, "0m", None)
     assert jobs == []
 
 
 def test_no_jobs_when_both_offsets_none():
-    now = datetime(2026, 5, 20, 11, 30, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 20, 11, 30, tzinfo=UTC)
     event = make_event("uid-5", 9, 0)
     jobs = compute_jobs([event], now, NY, None, None)
     assert jobs == []
@@ -91,14 +91,14 @@ def test_no_jobs_when_both_offsets_none():
 def test_reminder_not_fired_when_fire_at_in_future():
     # Event at 3pm EDT = 19:00 UTC. 2h reminder fires at 17:00 UTC.
     # now = 16:00 UTC, which is BEFORE 17:00, so reminder should NOT fire.
-    now = datetime(2026, 5, 20, 16, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 20, 16, 0, tzinfo=UTC)
     event = make_event("uid-6", 15, 0)  # 3pm NY = 19:00 UTC
     jobs = compute_jobs([event], now, NY, None, "2h")
     assert jobs == []
 
 
 def test_digest_fire_at_equals_now():
-    now = datetime(2026, 5, 20, 14, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 5, 20, 14, 0, tzinfo=UTC)
     event = make_event("uid-7", 9, 0)
     jobs = compute_jobs([event], now, NY, "0m", None)
     assert len(jobs) == 1

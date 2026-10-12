@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from calendar2mastodon.ical_fetch import CalendarEvent
@@ -61,7 +61,7 @@ def compute_jobs(
                 # Digest mode: fire immediately at run time for any matching event today.
                 jobs.append(ReminderJob(event=event, reminder_number=reminder_number, fire_at=now))
             else:
-                fire_at = event.start.astimezone(timezone.utc) - delta
+                fire_at = event.start.astimezone(UTC) - delta
                 if fire_at <= now:
                     jobs.append(ReminderJob(event=event, reminder_number=reminder_number, fire_at=fire_at))
 

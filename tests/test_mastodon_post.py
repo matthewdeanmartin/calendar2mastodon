@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import ClassVar
 
@@ -73,7 +73,7 @@ def test_post_dm_mentions_self_and_tags_message(monkeypatch: pytest.MonkeyPatch)
 
 def test_cleanup_old_posts_only_deletes_direct_tagged_posts(monkeypatch: pytest.MonkeyPatch) -> None:
     install_fake_mastodon(monkeypatch)
-    now = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
     old_direct = FakeStatus(now - timedelta(days=8), "direct")
     old_public = FakeStatus(now - timedelta(days=8), "public")
     recent_direct = FakeStatus(now - timedelta(days=2), "direct")
@@ -106,7 +106,7 @@ def test_cleanup_stops_after_48_hour_expiration_window(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     install_fake_mastodon(monkeypatch)
-    now = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
     eligible = FakeStatus(now - timedelta(days=8), "direct")
     too_old = FakeStatus(now - timedelta(days=9, seconds=1), "direct")
     should_never_be_fetched = FakeStatus(now - timedelta(days=8), "direct")
@@ -127,7 +127,7 @@ def test_cleanup_delete_failure_is_logged_and_reraised(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     install_fake_mastodon(monkeypatch)
-    now = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
     FakeMastodon.pages = [[FakeStatus(now - timedelta(days=8), "direct")]]
 
     def fail_delete(_self: FakeMastodon, _status: FakeStatus) -> None:
@@ -144,7 +144,7 @@ def test_cleanup_pagination_failure_is_logged_and_reraised(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     install_fake_mastodon(monkeypatch)
-    now = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
     FakeMastodon.pages = [[FakeStatus(now - timedelta(days=2), "direct")]]
 
     def fail_fetch(_self: FakeMastodon, _page: list[FakeStatus]) -> None:
@@ -165,11 +165,11 @@ def test_build_dm_text_format() -> None:
 def test_as_utc_naive_datetime() -> None:
     naive = datetime(2026, 5, 20, 12, 0)
     result = mastodon_post._as_utc(naive)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.hour == 12
 
 
 def test_as_utc_aware_datetime() -> None:
-    aware = datetime(2026, 5, 20, 12, 0, tzinfo=timezone.utc)
+    aware = datetime(2026, 5, 20, 12, 0, tzinfo=UTC)
     result = mastodon_post._as_utc(aware)
     assert result == aware

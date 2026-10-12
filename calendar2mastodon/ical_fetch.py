@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import url2pathname
@@ -44,7 +44,7 @@ def as_aware_datetime(value: object, tz: ZoneInfo) -> datetime:
     if isinstance(value, datetime):
         if value.tzinfo is None:
             return value.replace(tzinfo=tz)
-        return value.astimezone(timezone.utc)
+        return value.astimezone(UTC)
     if isinstance(value, date):
         return datetime(value.year, value.month, value.day, tzinfo=tz)
     raise TypeError(f"Cannot convert {type(value)} to datetime")

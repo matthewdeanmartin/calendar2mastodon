@@ -7,7 +7,7 @@ import html
 import re
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from html.parser import HTMLParser
 from typing import Any, TextIO
 
@@ -17,7 +17,7 @@ from calendar2mastodon.mastodon_post import DELETE_AFTER, POST_TAG, TIMELINE_PAG
 __all__ = ["CleanupCandidate", "delete_legacy_reminders", "find_legacy_reminders", "main"]
 
 REMINDER_PATTERN = re.compile(r"(?:^|\s)Reminder [12]:\s", re.IGNORECASE)
-DEFAULT_SINCE = datetime(2026, 5, 25, tzinfo=timezone.utc)
+DEFAULT_SINCE = datetime(2026, 5, 25, tzinfo=UTC)
 
 
 class _TextExtractor(HTMLParser):
@@ -72,7 +72,7 @@ def find_legacy_reminders(
 ) -> tuple[Any, list[CleanupCandidate], bool]:
     """Return the API client and old direct statuses matching this app's output."""
     client = _build_client(base_url, access_token)
-    cutoff = (now if now is not None else datetime.now(tz=timezone.utc)) - DELETE_AFTER
+    cutoff = (now if now is not None else datetime.now(tz=UTC)) - DELETE_AFTER
     account = client.me()
     page = client.account_statuses(account, limit=TIMELINE_PAGE_SIZE)
     candidates: list[CleanupCandidate] = []
@@ -114,7 +114,7 @@ def delete_legacy_reminders(
 ) -> int:
     """Delete matching reminders as they are scanned, flushing progress after each one."""
     client = _build_client(base_url, access_token)
-    cutoff = (now if now is not None else datetime.now(tz=timezone.utc)) - DELETE_AFTER
+    cutoff = (now if now is not None else datetime.now(tz=UTC)) - DELETE_AFTER
     account = client.me()
     page = client.account_statuses(account, limit=TIMELINE_PAGE_SIZE)
     scanned = 0

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -11,7 +11,7 @@ import pytest
 from calendar2mastodon.ical_fetch import as_aware_datetime, fetch_ical, parse_ical
 
 NY = ZoneInfo("America/New_York")
-UTC = timezone.utc
+UTC = UTC
 
 # ---------------------------------------------------------------------------
 # as_aware_datetime

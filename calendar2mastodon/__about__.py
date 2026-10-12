@@ -17,8 +17,8 @@ __title__ = "calendar2mastodon"
 __version__ = "0.1.0"
 __description__ = "A Python tool to post calendar events to Mastodon"
 __readme__ = "README.md"
-__credits__ = [{'name': 'Matthew Martin', 'email': 'matthewdeanmartin@gmail.com'}]
-__keywords__ = ['calendar2mastodon']
+__credits__ = [{"name": "Matthew Martin", "email": "matthewdeanmartin@gmail.com"}]
+__keywords__ = ["calendar2mastodon"]
 __license__ = "MIT"
 __requires_python__ = ">=3.10"
 __status__ = "3 - Alpha"

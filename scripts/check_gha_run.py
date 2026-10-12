@@ -6,7 +6,6 @@ import json
 import subprocess
 import sys
 
-
 WORKFLOW = "calendar_reminder.yml"
 REPO = "matthewdeanmartin/calendar2mastodon"
 
@@ -14,11 +13,17 @@ REPO = "matthewdeanmartin/calendar2mastodon"
 def latest_run() -> dict:
     result = subprocess.run(
         [
-            "gh", "run", "list",
-            "--workflow", WORKFLOW,
-            "--repo", REPO,
-            "--limit", "1",
-            "--json", "databaseId,status,conclusion,startedAt,updatedAt,url",
+            "gh",
+            "run",
+            "list",
+            "--workflow",
+            WORKFLOW,
+            "--repo",
+            REPO,
+            "--limit",
+            "1",
+            "--json",
+            "databaseId,status,conclusion,startedAt,updatedAt,url",
         ],
         capture_output=True,
         text=True,

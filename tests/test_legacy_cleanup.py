@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from io import StringIO
 from types import SimpleNamespace
 from typing import Any
@@ -41,7 +41,7 @@ def status(status_id: str, created_at: datetime, visibility: str, content: str) 
 
 
 def test_find_legacy_reminders_matches_only_old_direct_app_posts(monkeypatch: pytest.MonkeyPatch) -> None:
-    now = datetime(2026, 7, 15, tzinfo=timezone.utc)
+    now = datetime(2026, 7, 15, tzinfo=UTC)
     old = now - timedelta(days=30)
     pages = [
         [
@@ -72,7 +72,7 @@ def test_plain_text_decodes_status_html() -> None:
 
 
 def test_find_legacy_reminders_can_stop_after_preview_limit(monkeypatch: pytest.MonkeyPatch) -> None:
-    now = datetime(2026, 7, 15, tzinfo=timezone.utc)
+    now = datetime(2026, 7, 15, tzinfo=UTC)
     old = now - timedelta(days=30)
     client = FakeClient(
         [
@@ -98,7 +98,7 @@ def test_find_legacy_reminders_can_stop_after_preview_limit(monkeypatch: pytest.
 
 
 def test_delete_legacy_reminders_flushes_each_deletion(monkeypatch: pytest.MonkeyPatch) -> None:
-    now = datetime(2026, 7, 15, tzinfo=timezone.utc)
+    now = datetime(2026, 7, 15, tzinfo=UTC)
     old = now - timedelta(days=30)
     client = FakeClient(
         [
@@ -128,19 +128,19 @@ def test_delete_legacy_reminders_flushes_each_deletion(monkeypatch: pytest.Monke
 
 
 def test_delete_stops_when_timeline_crosses_may_25_lower_bound(monkeypatch: pytest.MonkeyPatch) -> None:
-    now = datetime(2026, 7, 15, tzinfo=timezone.utc)
+    now = datetime(2026, 7, 15, tzinfo=UTC)
     client = FakeClient(
         [
             [
                 status(
                     "in-window",
-                    datetime(2026, 5, 25, tzinfo=timezone.utc),
+                    datetime(2026, 5, 25, tzinfo=UTC),
                     "direct",
                     "<p>@mistersql Reminder 1: Keep</p>",
                 ),
                 status(
                     "too-old",
-                    datetime(2026, 5, 24, tzinfo=timezone.utc),
+                    datetime(2026, 5, 24, tzinfo=UTC),
                     "direct",
                     "<p>@mistersql Reminder 1: Stop</p>",
                 ),
@@ -148,7 +148,7 @@ def test_delete_stops_when_timeline_crosses_may_25_lower_bound(monkeypatch: pyte
             [
                 status(
                     "never-read",
-                    datetime(2026, 5, 23, tzinfo=timezone.utc),
+                    datetime(2026, 5, 23, tzinfo=UTC),
                     "direct",
                     "<p>@mistersql Reminder 1: Stop</p>",
                 )

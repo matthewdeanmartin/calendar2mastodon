@@ -86,9 +86,7 @@ def test_mastodon_base_url_cli_override() -> None:
 def test_toml_config_loaded(tmp_path: Path) -> None:
     toml_file = tmp_path / "pyproject.toml"
     toml_file.write_text(
-        "[tool.calendar2mastodon]\n"
-        'ical_url = "https://toml.example.com/calendar.ics"\n'
-        'timezone = "Europe/London"\n'
+        '[tool.calendar2mastodon]\nical_url = "https://toml.example.com/calendar.ics"\ntimezone = "Europe/London"\n'
     )
     cfg = build_config(toml_path=toml_file, cli_overrides={})
     assert cfg.ical_url == "https://toml.example.com/calendar.ics"
