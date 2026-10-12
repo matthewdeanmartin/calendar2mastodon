@@ -98,6 +98,34 @@ def test_run_errors_on_ical_fetch_failure(
     assert "bad url" in capsys.readouterr().err
 
 
+def test_run_does_not_swallow_cleanup_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    import calendar2mastodon.cli as cli
+    import calendar2mastodon.mastodon_post as mastodon_post
+
+    events_loaded = False
+
+    def fail_cleanup(*_args: object, **_kwargs: object) -> int:
+        raise RuntimeError("Mastodon cleanup failed")
+
+    def load_events(_url: str, _tz: object) -> list[object]:
+        nonlocal events_loaded
+        events_loaded = True
+        return []
+
+    monkeypatch.setattr(mastodon_post, "cleanup_old_posts", fail_cleanup)
+    monkeypatch.setattr(cli, "load_events", load_events)
+    config = AppConfig(
+        ical_url="https://example.com/calendar.ics",
+        mastodon_access_token="token",
+        state_file=tmp_path / "sent.json",
+    )
+
+    with pytest.raises(RuntimeError, match="Mastodon cleanup failed"):
+        run(config)
+
+    assert not events_loaded
+
+
 def test_run_dry_run_does_not_require_token(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

@@ -23,9 +23,9 @@ __license__ = "MIT"
 __requires_python__ = ">=3.10"
 __status__ = "3 - Alpha"
 __dependencies__ = [
-    "httpx>=0.27.0",
+    "httpx2>=2.0,<3",
     "icalendar>=6.0.0",
     "Mastodon.py>=1.8.0",
     "tomli>=2.0.0; python_version < '3.11'",
     "tzdata>=2024.1",
-]
+]

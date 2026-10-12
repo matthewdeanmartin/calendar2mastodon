@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from datetime import datetime as dt
 from datetime import timezone
@@ -118,6 +119,10 @@ def run(config: AppConfig) -> int:
 
 def main() -> None:
     """Parse CLI arguments, build config, and run the reminder loop."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     parser = build_parser()
     args = parser.parse_args()
 

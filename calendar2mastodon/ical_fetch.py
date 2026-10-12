@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from urllib.request import url2pathname
 from zoneinfo import ZoneInfo
 
-import httpx
+import httpx2
 from icalendar import Calendar
 
 
@@ -33,7 +33,7 @@ def fetch_ical(url: str, timeout: int = 15) -> bytes:
         return Path(url2pathname(parsed.path)).read_bytes()
     if parsed.scheme != "https":
         raise ValueError(f"iCal URL must use https (got {parsed.scheme!r})")
-    with httpx.Client(verify=True, timeout=timeout) as client:
+    with httpx2.Client(verify=True, timeout=timeout) as client:
         response = client.get(url)
         response.raise_for_status()
         return response.content

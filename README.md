@@ -51,3 +51,10 @@ MIT — see [LICENSE](LICENSE).
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+
+## HTTPX2 migration verification (2026-10-04)
+
+Calendar downloads use HTTPX2. All 82 tests pass on RC3 stable/pre and 3.14.7. Existing operator changes in posting/cleanup code were preserved.
+
+Dependency locks upgraded and checked. Published dependency wheels only; no native builds or GitHub jobs. Application HTTPX2 objects remain separate from third-party HTTPX objects. Current HTTPX2 releases use the OS trust store. Experimental RC3 tests may require Pydantic prerelease wheels; stable support is reported separately. Changes local; human operators decide releases and upstream reports.

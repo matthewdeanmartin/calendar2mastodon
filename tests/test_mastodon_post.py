@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -99,6 +100,61 @@ def test_cleanup_empty_first_page(monkeypatch: pytest.MonkeyPatch) -> None:
     FakeMastodon.pages = [None]
     deleted = mastodon_post.cleanup_old_posts("https://mastodon.social", "token")
     assert deleted == 0
+
+
+def test_cleanup_stops_after_48_hour_expiration_window(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    install_fake_mastodon(monkeypatch)
+    now = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+    eligible = FakeStatus(now - timedelta(days=8), "direct")
+    too_old = FakeStatus(now - timedelta(days=9, seconds=1), "direct")
+    should_never_be_fetched = FakeStatus(now - timedelta(days=8), "direct")
+    FakeMastodon.pages = [[eligible, too_old], [should_never_be_fetched]]
+
+    with caplog.at_level(logging.INFO):
+        deleted = mastodon_post.cleanup_old_posts("https://mastodon.social", "token", now=now)
+
+    instance = FakeMastodon.last_instance
+    assert instance is not None
+    assert deleted == 1
+    assert instance.deleted == [eligible]
+    assert instance.fetch_count == 0
+    assert "Cleanup reached its 48-hour boundary" in caplog.text
+
+
+def test_cleanup_delete_failure_is_logged_and_reraised(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    install_fake_mastodon(monkeypatch)
+    now = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+    FakeMastodon.pages = [[FakeStatus(now - timedelta(days=8), "direct")]]
+
+    def fail_delete(_self: FakeMastodon, _status: FakeStatus) -> None:
+        raise RuntimeError("delete failed")
+
+    monkeypatch.setattr(FakeMastodon, "status_delete", fail_delete)
+    with caplog.at_level(logging.ERROR), pytest.raises(RuntimeError, match="delete failed"):
+        mastodon_post.cleanup_old_posts("https://mastodon.social", "token", now=now)
+
+    assert "Failed to delete reminder status" in caplog.text
+
+
+def test_cleanup_pagination_failure_is_logged_and_reraised(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    install_fake_mastodon(monkeypatch)
+    now = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+    FakeMastodon.pages = [[FakeStatus(now - timedelta(days=2), "direct")]]
+
+    def fail_fetch(_self: FakeMastodon, _page: list[FakeStatus]) -> None:
+        raise RuntimeError("pagination failed")
+
+    monkeypatch.setattr(FakeMastodon, "fetch_next", fail_fetch)
+    with caplog.at_level(logging.ERROR), pytest.raises(RuntimeError, match="pagination failed"):
+        mastodon_post.cleanup_old_posts("https://mastodon.social", "token", now=now)
+
+    assert "Failed to fetch cleanup page" in caplog.text
 
 
 def test_build_dm_text_format() -> None:
